@@ -139,3 +139,45 @@ class TestAccountService(TestCase):
         """It should not Read an Account that is not found"""
         resp = self.client.get(f"{BASE_URL}/0")
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_get_account_list(self):
+        """It should Get a list of Accounts"""
+        self._create_accounts(5)
+        resp = self.client.get(BASE_URL)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertEqual(len(data), 5)
+
+    def test_update_account(self):
+        """It should Update an existing Account"""
+        # Create an account to update
+        test_account = self._create_accounts(1)[0]
+        app.logger.info(f"Created account ID: {test_account.id}")
+        
+        # Update the account
+        updated_account = test_account.serialize()
+        updated_account["name"] = "Updated Name"
+        resp = self.client.put(
+            f"{BASE_URL}/{test_account.id}",
+            json=updated_account,
+            content_type="application/json"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        
+        # Retrieve the updated account
+        resp = self.client.get(f"{BASE_URL}/{test_account.id}", content_type="application/json")
+        data = resp.get_json()
+        self.assertEqual(data["name"], "Updated Name")
+
+    def test_delete_account(self):
+        """It should Delete an Account"""
+        account = self._create_accounts(1)[0]
+        app.logger.info(f"Created account ID: {account.id}")
+
+        # Delete the account
+        resp = self.client.delete(f"{BASE_URL}/{account.id}", content_type="application/json")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Try to retrieve the deleted account
+        resp = self.client.get(f"{BASE_URL}/{account.id}", content_type="application/json")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
